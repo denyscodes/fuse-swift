@@ -100,11 +100,12 @@ class ViewController: UITableViewController {
 
         let results = fuse.search(searchText, in: books)
 
-        filteredBooks = results.map { (index, _, matchedRanges) in
-            let book = books[index]
+        filteredBooks = results.map { result in
+            let book = books[result.index]
 
             let attributedString = NSMutableAttributedString(string: book)
-            matchedRanges
+            result
+                .ranges
                 .map(Range.init)
                 .map(NSRange.init)
                 .forEach {

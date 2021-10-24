@@ -9,8 +9,8 @@
 import Foundation
 
 public struct FuseProperty {
-    let name: String
-    let weight: Double
+    public let name: String
+    public let weight: Double
     
     public init (name: String) {
         self.init(name: name, weight: 1)
@@ -26,6 +26,31 @@ public protocol Fuseable {
     var properties: [FuseProperty] { get }
 }
 
+public struct Pattern {
+    public var text: String
+    public var len: Int
+    public var mask: Int
+    public var alphabet: [Character: Int]
+}
+
+public struct SearchResult {
+    public var index: Int
+    public var score: Double
+    public var ranges: [CountableClosedRange<Int>]
+}
+
+public struct FusableSearchResult {
+    public var index: Int
+    public var score: Double
+    public var results: [Result]
+    
+    public struct Result {
+        public var key: String
+        public var score: Double
+        public var ranges: [CountableClosedRange<Int>]
+    }
+}
+
 public class Fuse {
     private var location: Int
     private var distance: Int
@@ -33,20 +58,6 @@ public class Fuse {
     private var maxPatternLength: Int
     private var isCaseSensitive: Bool
     private var tokenize: Bool
-    
-    public typealias Pattern = (text: String, len: Int, mask: Int, alphabet: [Character: Int])
-    
-    public typealias SearchResult = (index: Int, score: Double, ranges: [CountableClosedRange<Int>])
-    
-    public typealias FusableSearchResult = (
-        index: Int,
-        score: Double,
-        results: [(
-            key: String,
-            score: Double,
-            ranges: [CountableClosedRange<Int>]
-        )]
-    )
     
     fileprivate lazy var searchQueue: DispatchQueue = { [unowned self] in
         let label = "fuse.search.queue"
@@ -83,7 +94,7 @@ public class Fuse {
             return nil
         }
         
-        return (
+        return Pattern(
             text: pattern,
             len: len,
             mask: 1 << (len - 1),
@@ -332,7 +343,9 @@ extension Fuse {
         
         for (index, item) in aList.enumerated() {
             if let result = self.search(pattern, in: item) {
-                items.append((index, result.score, result.ranges))
+                items.append(SearchResult(index: index,
+                                          score: result.score,
+                                          ranges: result.ranges))
             }
         }
         
@@ -359,7 +372,7 @@ extension Fuse {
         let group = DispatchGroup()
         let count = aList.count
         
-        stride(from: 0, to: count, by: chunkSize).forEach { offset in
+        for offset in stride(from: 0, to: count, by: chunkSize) { 
             let chunk = Array(aList[offset..<min(offset + chunkSize, count)])
             group.enter()
             self.searchQueue.async {
@@ -367,7 +380,9 @@ extension Fuse {
                 
                 for (index, item) in chunk.enumerated() {
                     if let result = self.search(pattern, in: item) {
-                        chunkItems.append((offset + index, result.score, result.ranges))
+                        chunkItems.append(SearchResult(index: offset + index,
+                                                       score: result.score,
+                                                       ranges: result.ranges))
                     }
                 }
                 
@@ -431,9 +446,9 @@ extension Fuse {
             var scores = [Double]()
             var totalScore = 0.0
             
-            var propertyResults = [(key: String, score: Double, ranges: [CountableClosedRange<Int>])]()
+            var propertyResults = [FusableSearchResult.Result]()
 
-            item.properties.forEach { property in
+            for property in item.properties {
                 let value = property.name
                 
                 if let result = self.search(pattern, in: value) {
@@ -443,7 +458,7 @@ extension Fuse {
                     
                     scores.append(score)
                     
-                    propertyResults.append((key: property.name, score: score, ranges: result.ranges))
+                    propertyResults.append(FusableSearchResult.Result(key: property.name, score: score, ranges: result.ranges))
                 }
             }
             
@@ -451,7 +466,7 @@ extension Fuse {
                 continue
             }
             
-            collectionResult.append((
+            collectionResult.append(FusableSearchResult(
                 index: index,
                 score: totalScore / Double(scores.count),
                 results: propertyResults
@@ -512,7 +527,7 @@ extension Fuse {
         // to need to debug work items running on this queue.
         let collectionResultQueue = DispatchQueue(label: "fuse.result.queue")
         
-        stride(from: 0, to: count, by: chunkSize).forEach { offset in
+        for offset in stride(from: 0, to: count, by: chunkSize) {
             let chunk = Array(aList[offset..<min(offset + chunkSize, count)])
             group.enter()
             self.searchQueue.async {
@@ -522,9 +537,9 @@ extension Fuse {
                     var scores = [Double]()
                     var totalScore = 0.0
                     
-                    var propertyResults = [(key: String, score: Double, ranges: [CountableClosedRange<Int>])]()
+                    var propertyResults = [FusableSearchResult.Result]()
 
-                    item.properties.forEach { property in
+                    for property in item.properties {
 
                         let value = property.name
                         
@@ -535,7 +550,7 @@ extension Fuse {
                             
                             scores.append(score)
                             
-                            propertyResults.append((key: property.name, score: score, ranges: result.ranges))
+                            propertyResults.append(FusableSearchResult.Result(key: property.name, score: score, ranges: result.ranges))
                         }
                     }
                     
@@ -543,7 +558,7 @@ extension Fuse {
                         continue
                     }
                     
-                    chunkResult.append((
+                    chunkResult.append(FusableSearchResult(
                         index: offset + index,
                         score: totalScore / Double(scores.count),
                         results: propertyResults
