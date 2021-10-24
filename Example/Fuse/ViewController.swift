@@ -30,7 +30,6 @@ class ViewController: UITableViewController {
         searchController.searchResultsUpdater = self
         searchController.searchBar.delegate = self
         definesPresentationContext = true
-        searchController.dimsBackgroundDuringPresentation = false
         
         // Setup the Scope Bar
         tableView.tableHeaderView = searchController.searchBar
