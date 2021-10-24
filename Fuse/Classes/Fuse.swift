@@ -567,10 +567,3 @@ extension Fuse {
         }
     }
 }
-
-#if swift(>=4.2)
-#else
-extension CountableClosedRange: Hashable where Element: Hashable {
-    public var hashValue: Int { return String(describing: self).hashValue }
-}
-#endif
