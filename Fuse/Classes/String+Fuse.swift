@@ -61,4 +61,9 @@ extension String {
             return nil
         }
     }
+
+    /// E.g. Übersicht -> Ubersicht
+    func removingDiacritics(locale: Locale? = nil) -> String {
+        folding(options: .diacriticInsensitive, locale: locale)
+    }
 }

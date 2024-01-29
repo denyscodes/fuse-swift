@@ -57,7 +57,8 @@ class ViewController: UITableViewController {
             "The Book of Samson",
             "The Preservationist",
             "Fallen",
-            "Monster 1959"
+            "Monster 1959",
+            "Übersicht"
         ]
     }
     

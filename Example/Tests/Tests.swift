@@ -39,6 +39,12 @@ class Tests: XCTestCase {
         pattern = fuse.createPattern(from: "")
         result = fuse.search(pattern, in: "abc")
         XCTAssert(result == nil, "No result")
+
+        pattern = fuse.createPattern(from: "ubermeow")
+        result = fuse.search(pattern, in: "Übersicht")
+
+        XCTAssert(result?.ranges.count == 1, "Found the correct number of ranges")
+        XCTAssert(result?.ranges.first == 0...3, "Found the correct range")
     }
     
     func testSequence() {
